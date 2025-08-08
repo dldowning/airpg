@@ -279,7 +279,7 @@ EXAMPLE2_LEGEND = {
 ---
 """
 from django.conf import settings
-from typeclasses import exits
+from evennia.objects.objects import DefaultExit as Exit
 
 from evennia import create_object
 from evennia.utils import utils
@@ -336,14 +336,21 @@ def build_map(caller, game_map, legend, iterations=1, build_exits=True):
     for iteration in range(iterations):
         for y in range(len(game_map)):
             for x in range(len(game_map[y])):
-                for key in legend:
-                    # obs - we must use == for strings
-                    if game_map[y][x] == key:
-                        room = legend[key](
-                            x, y, iteration=iteration, room_dict=room_dict, caller=caller
-                        )
-                        if iteration == 0:
-                            room_dict[(x, y)] = room
+                for key, builder_func in legend.items():
+                    if isinstance(key, str):
+                        if game_map[y][x] == key:
+                            room = builder_func(
+                                x, y, iteration=iteration, room_dict=room_dict, caller=caller
+                            )
+                            if iteration == 0:
+                                room_dict[(x, y)] = room
+                    elif isinstance(key, (list, tuple)):
+                        if game_map[y][x] in key:
+                            room = builder_func(
+                                x, y, iteration=iteration, room_dict=room_dict, caller=caller
+                            )
+                            if iteration == 0:
+                                room_dict[(x, y)] = room
 
     if build_exits:
         # Creating exits. Assumes single room object in dict entry
@@ -356,7 +363,7 @@ def build_map(caller, game_map, legend, iterations=1, build_exits=True):
             if (x, y - 1) in room_dict:
                 if room_dict[(x, y - 1)]:
                     create_object(
-                        exits.Exit,
+                        Exit,
                         key="north",
                         aliases=["n"],
                         location=location,
@@ -367,7 +374,7 @@ def build_map(caller, game_map, legend, iterations=1, build_exits=True):
             if (x + 1, y) in room_dict:
                 if room_dict[(x + 1, y)]:
                     create_object(
-                        exits.Exit,
+                        Exit,
                         key="east",
                         aliases=["e"],
                         location=location,
@@ -378,7 +385,7 @@ def build_map(caller, game_map, legend, iterations=1, build_exits=True):
             if (x, y + 1) in room_dict:
                 if room_dict[(x, y + 1)]:
                     create_object(
-                        exits.Exit,
+                        Exit,
                         key="south",
                         aliases=["s"],
                         location=location,
@@ -389,7 +396,7 @@ def build_map(caller, game_map, legend, iterations=1, build_exits=True):
             if (x - 1, y) in room_dict:
                 if room_dict[(x - 1, y)]:
                     create_object(
-                        exits.Exit,
+                        Exit,
                         key="west",
                         aliases=["w"],
                         location=location,
@@ -397,6 +404,7 @@ def build_map(caller, game_map, legend, iterations=1, build_exits=True):
                     )
 
     caller.msg("Map Created.")
+    return room_dict
 
 
 # access command

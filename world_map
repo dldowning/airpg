@@ -1,0 +1,8 @@
+// Tethysia World Map
+graph {
+	F [label="Zone F"]
+	M [label="Zone M"]
+	C [label="Zone C"]
+	F -- M
+	M -- C
+}

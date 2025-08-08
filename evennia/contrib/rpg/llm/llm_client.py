@@ -39,7 +39,7 @@ DEFAULT_LLM_HOST = "http://127.0.0.1:5000"
 DEFAULT_LLM_PATH = "/api/v1/generate"
 DEFAULT_LLM_HEADERS = {"Content-Type": ["application/json"]}
 DEFAULT_LLM_PROMPT_KEYNAME = "prompt"
-DEFAULT_LLM_API_TYPE = ""  # or openai
+DEFAULT_LLM_API_TYPE = "text-generation-webui"  # or ollama
 DEFAULT_LLM_REQUEST_BODY = {
     "max_new_tokens": 250,  # max number of tokens to generate
     "temperature": 0.7,  # higher = more random, lower = more predictable
@@ -133,8 +133,8 @@ class LLMClient:
         failure.trap(Exception)
         return (500, failure.getErrorMessage())
 
-    def _get_response_from_llm_server(self, prompt):
-        """Call the LLM server and handle the response/failure"""
+    def _get_textgen_response_from_llm_server(self, prompt):
+        """Call the text-generation-webui LLM server and handle the response/failure"""
         request_body = self._format_request_body(prompt)
 
         if settings.DEBUG:
@@ -149,6 +149,45 @@ class LLMClient:
 
         d.addCallbacks(self._handle_llm_response_body, self._handle_llm_error)
         return d
+
+    @inlineCallbacks
+    def get_ollama_response(self, prompt):
+        """
+        Get a response from an Ollama LLM server.
+
+        """
+        request_body = self._format_request_body(prompt)
+        # ollama has a different API format
+        request_body["model"] = self.request_body.get("model", "llama2")
+        request_body["stream"] = False  # we want the full response
+
+        if settings.DEBUG:
+            logger.log_info(f"Ollama request body: {request_body}")
+
+        d = self.agent.request(
+            b"POST",
+            bytes(self.hostname + self.pathname, "utf-8"),
+            headers=Headers(self.headers),
+            bodyProducer=StringProducer(json.dumps(request_body)),
+        )
+        status_code, response = yield d.addCallbacks(
+            self._handle_llm_response_body, self._handle_llm_error
+        )
+
+        if status_code == 200:
+            if settings.DEBUG:
+                logger.log_info(f"Ollama response: {response}")
+            # Ollama returns a streaming json, we take the last message which has the full response
+            lines = response.strip().split(b"\n")
+            try:
+                last_line = json.loads(lines[-1])
+                return last_line.get("response", "")
+            except (json.JSONDecodeError, IndexError):
+                logger.log_err(f"Ollama API error: Could not parse response: {response}")
+                return ""
+        else:
+            logger.log_err(f"Ollama API error (status {status_code}): {response}")
+            return ""
 
     @inlineCallbacks
     def get_response(self, prompt):
@@ -166,7 +205,12 @@ class LLMClient:
                 the caller is expected to handle this gracefully.
 
         """
-        status_code, response = yield self._get_response_from_llm_server(prompt)
+        if self.api_type == "ollama":
+            response = yield self.get_ollama_response(prompt)
+            return response
+
+        # default to text-generation-webui
+        status_code, response = yield self._get_textgen_response_from_llm_server(prompt)
         if status_code == 200:
             if settings.DEBUG:
                 logger.log_info(f"LLM response: {response}")

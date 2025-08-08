@@ -32,7 +32,29 @@ from evennia.settings_default import *
 ######################################################################
 
 # This is the name of your game. Make it catchy!
-SERVERNAME = {servername}
+SERVERNAME = "MyEvenniaGame"
+
+
+######################################################################
+# LLM (Large Language Model) support
+######################################################################
+# The LLM client is used to communicate with an LLM server.
+# This can be used for generating texts for AI npcs, etc.
+#
+# See evennia/contrib/rpg/llm/README.md for more info.
+#
+# Available API types are 'text-generation-webui' and 'ollama'.
+LLM_API_TYPE = "ollama"
+# The host and port of the LLM server.
+LLM_HOST = "http://127.0.0.1:11434"
+# The path to the API endpoint on the LLM server.
+LLM_PATH = "/api/chat"
+# The body of the request sent to the LLM server. This is API-specific.
+# For ollama, this should contain the model name and other parameters.
+LLM_REQUEST_BODY = {
+    "model": "llama3",
+    "stream": False,
+}
 
 
 ######################################################################

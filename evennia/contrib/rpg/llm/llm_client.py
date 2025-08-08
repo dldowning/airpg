@@ -39,7 +39,7 @@ DEFAULT_LLM_HOST = "http://127.0.0.1:5000"
 DEFAULT_LLM_PATH = "/api/v1/generate"
 DEFAULT_LLM_HEADERS = {"Content-Type": ["application/json"]}
 DEFAULT_LLM_PROMPT_KEYNAME = "prompt"
-DEFAULT_LLM_API_TYPE = ""  # or openai
+DEFAULT_LLM_API_TYPE = "text-generation-webui"  # or 'ollama', 'openai'
 DEFAULT_LLM_REQUEST_BODY = {
     "max_new_tokens": 250,  # max number of tokens to generate
     "temperature": 0.7,  # higher = more random, lower = more predictable
@@ -118,7 +118,12 @@ class LLMClient:
 
         prompt = "\n".join(make_iter(prompt))
 
-        request_body[self.prompt_keyname] = prompt
+        if self.api_type == "ollama":
+            # for ollama, the prompt is part of a 'messages' list
+            request_body["messages"] = [{"role": "user", "content": prompt}]
+        else:
+            # default is text-generation-webui
+            request_body[self.prompt_keyname] = prompt
 
         return request_body
 
@@ -170,7 +175,19 @@ class LLMClient:
         if status_code == 200:
             if settings.DEBUG:
                 logger.log_info(f"LLM response: {response}")
-            return json.loads(response)["results"][0]["text"]
+            try:
+                response_data = json.loads(response)
+                if self.api_type == "ollama":
+                    return response_data.get("message", {}).get("content", "")
+                else:
+                    # default is text-generation-webui
+                    results = response_data.get("results")
+                    if results and isinstance(results, list) and len(results) > 0:
+                        return results[0].get("text", "")
+                    return ""
+            except json.JSONDecodeError:
+                logger.log_err(f"LLM API response is not valid JSON: {response}")
+                return ""
         else:
             logger.log_err(f"LLM API error (status {status_code}): {response}")
             return ""

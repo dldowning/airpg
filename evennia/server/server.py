@@ -39,3 +39,6 @@ if "--nodaemon" not in sys.argv and "test" not in sys.argv:
         max_size=settings.SERVER_LOG_MAX_SIZE,
     )
     globalLogPublisher.addObserver(logger.GetServerLogObserver()(logfile))
+else:
+    # while testing, log to a null observer to avoid deadlocks
+    globalLogPublisher.addObserver(lambda event: None)

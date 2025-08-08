@@ -31,7 +31,8 @@ class TestWorldBuilder(BaseEvenniaCommandTest):
         # Check that the rooms were created
         self.assertTrue(ObjectDB.objects.filter(db_key__startswith="Forest").exists())
         self.assertTrue(ObjectDB.objects.filter(db_key__startswith="Mountain").exists())
-        self.assertTrue(ObjectDB.objects.filter(db_key__startswith="City").exists())
+        self.assertTrue(ObjectDB.objects.filter(db_key__startswith="Street").exists())
+        self.assertTrue(ObjectDB.objects.filter(db_key__startswith="House").exists())
 
         # Check that the exits were created
         forest_room = ObjectDB.objects.filter(db_key__startswith="Forest").first()

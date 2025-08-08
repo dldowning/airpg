@@ -68,7 +68,7 @@ class CmdWorldBuilder(COMMAND_DEFAULT_CLASS):
         # Create the world builder and run it
         builder = WorldBuilder(caller, world_map, world_legend, world_data)
         builder.build()
-        # builder.visualize("world_map") # we are not testing this for now
+        builder.visualize("world_map")
         builder.generate_player_guide("player_guide.md")
         builder.generate_developer_guide("developer_guide.md")
 
